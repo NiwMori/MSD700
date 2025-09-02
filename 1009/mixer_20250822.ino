@@ -51,6 +51,7 @@ HX711_asukiaaa::Parser parser(LOAD_CELL_RATED_VOLT, LOAD_CELL_RATED_GRAM,
                               HX711_R1, HX711_R2);
 float offsetGrams[numPins];
 
+
 //Display
 #include <TM1637Display.h>
 #define CLK 53  // TM1637のクロック
@@ -186,7 +187,6 @@ void setup() {
   pinMode(LedBlue, OUTPUT);
   pinMode(LedYellow, OUTPUT);
 }
-
 
 // モーター停止関数
 void stopMachine() {
@@ -333,7 +333,6 @@ void motor(int leftX, int leftY) {
   }
 }
 
-
 //--------------------------------------------------------------------------------------------------
 
 // --- EMA smoothing setup ---
@@ -342,9 +341,9 @@ const float alpha = 0.15;             // smoothing factor (0.05..0.3 typical)
 
 // --- Slowdown thresholds (percent) ---
 const float zone1Enter = 0.0;   // enter zone 1 (force forward, slowdown)
-const float zone1Exit  = 5.0;   // exit zone 1
-const float zone2Enter = 6.0;   // enter zone 2 (input but slowed)
-const float zone2Exit  = 20.0;  // exit zone 2
+const float zone1Exit  = 2.5;   // exit zone 1
+const float zone2Enter = 4.5;   // enter zone 2 (input but slowed)
+const float zone2Exit  = 30.0;  // exit zone 2
 
 float slowdownZone = 0.0;  // 0=normal, 1=zone1, 2=zone2
 
@@ -386,17 +385,25 @@ void moveActuator(int pulse, int fbPin, int fwdPin, int revPin) {
     bool moveREV = false;
 
     unsigned long now = millis();
-
     
     if (slowdownZone == 1) {
-        // Zone 1 → force forward slowd
-        if (now - lastPulseTime > 100) { // 100ms ON/OFF cycle
+      if(SwitchE < 1200){
+        // Zone 1 → force forward slow
+        if (now - lastPulseTime > 150) { // 100ms ON/OFF cycle
             lastPulseTime = now;
             pulseState = !pulseState;
         }
         moveFWD = pulseState;
         moveREV = false;
-        Serial.print("<ZONE1 FORCED FWD> ");
+        //Serial.print("<ZONE1 FORCED FWD> ");
+      } else {
+        if (pulse > 950 && pulse < 1250) {
+            moveFWD = true;
+        } else if (pulse > 1750 && pulse < 2070) {
+            moveREV = true;
+        }
+      }
+      
 
     } else if (slowdownZone == 1.5) {
         // Zone 1.5 → reverse prohibited, forward normal
@@ -404,24 +411,23 @@ void moveActuator(int pulse, int fbPin, int fwdPin, int revPin) {
             moveFWD = true;   // forward allowed
         }
         moveREV = false;      // reverse prohibited
-        Serial.print("<ZONE1.5 FWD ONLY> ");
+        //Serial.print("<ZONE1.5 FWD ONLY> ");
 
     } else if (slowdownZone == 2) {
         // Zone 2 → forward normal, reverse slowed
         if (pulse > 950 && pulse < 1250) {
             // Forward = normal
             moveFWD = true;
-        } else if (pulse > 1750 && pulse < 2070) {
-            // Reverse = slowed
-            if (now - lastPulseTime > 100) { // 100ms ON/OFF cycle
-                lastPulseTime = now;
-                pulseState = !pulseState;
-            }
-            if (pulseState) {
-                moveREV = true;
-            }
+        } else {
+            // force reverse slow 
+            if (now - lastPulseTime > 150) { // 100ms ON/OFF cycle
+                    lastPulseTime = now;
+                    pulseState = !pulseState;
+                }
+            moveREV = pulseState;
         }
-        Serial.print("<ZONE2: FWD normal, REV slowed> ");
+            
+        //Serial.print("<ZONE2: FWD normal, REV slowed> ");
     }
     else {
         // Normal → full input
@@ -430,7 +436,7 @@ void moveActuator(int pulse, int fbPin, int fwdPin, int revPin) {
         } else if (pulse > 1750 && pulse < 2070) {
             moveREV = true;
         }
-        Serial.print(">NORMAL INPUT> ");
+        //Serial.print(">NORMAL INPUT> ");
     }
 
     // --- Apply to pins ---
@@ -438,10 +444,12 @@ void moveActuator(int pulse, int fbPin, int fwdPin, int revPin) {
     digitalWrite(revPin, moveREV);
 
     // --- Debug output ---
+    /*
     Serial.print(" | FB%: "); Serial.print(fbPercent, 1);
     Serial.print(" | Zone: "); Serial.print(slowdownZone);
     Serial.print(" | FWD: "); Serial.print(moveFWD);
     Serial.print(" | REV: "); Serial.println(moveREV);
+    */
 }
 
 
@@ -519,6 +527,30 @@ void updateYellowLight(float weightKg) {
   }
 }
 
+
+// Try to read HX711 safely with timeout
+HX711_asukiaaa::ReadState safeRead(HX711_asukiaaa::Reader& reader, int times, unsigned long timeoutMs) {
+  unsigned long start = millis();
+  HX711_asukiaaa::ReadState state;
+
+  while (true) {
+    state = reader.read(times);
+
+    if (state == HX711_asukiaaa::ReadState::Success) {
+      return state;  // ✅ Got data
+    }
+
+    if (millis() - start >= timeoutMs) {
+      Serial.println("⚠ HX711 read timed out!");
+      return; // exit without updating weight
+    }
+
+    delay(1); // small pause so loop isn’t too tight
+  }
+}
+
+
+
 void updateAndDisplayWeightWithDisplayAndReset() {
   static unsigned long lastReadTime = 0;
   unsigned long now = millis();
@@ -527,7 +559,8 @@ void updateAndDisplayWeightWithDisplayAndReset() {
   if (now - lastReadTime >= 1000) {
     lastReadTime = now;
 
-    auto readState = reader.read(1);
+    //auto readState = reader.read(1);
+    auto readState = safeRead(reader, 1, 1000);  // wait max 1 second
     if (readState == HX711_asukiaaa::ReadState::Success) {
       float totalGram = 0;
       for (int i = 0; i < reader.doutLen; ++i) {
@@ -545,11 +578,14 @@ void updateAndDisplayWeightWithDisplayAndReset() {
       Serial.print("Weight: ");
       Serial.print(displayWeightKg);
       Serial.println(" kg");
+    }else {
+      Serial.println("⚠ HX711 read failed or timed out!");
+      // optional: re-init reader, or skip this cycle
     }
   }
 
   // リセットボタンが押されたとき（Low）
-  if (digitalRead(ResetSwitch) == LOW) {
+  if (digitalRead(ResetSwitch) == LOW || SwitchE > 1900) {
     Serial.println("Zeroing tare offset...");
     auto readState = reader.read(1);
     if (readState == HX711_asukiaaa::ReadState::Success) {
@@ -561,7 +597,6 @@ void updateAndDisplayWeightWithDisplayAndReset() {
   // 信号灯Yellow制御
   updateYellowLight(currentWeightKg);
 }
-
 
 void checkWeightAndSignalLight() {
   if (inverterswitch <= 1550) {  // インバータ停止中のみYellow制御を許可
@@ -612,7 +647,6 @@ void playRecord() {
   }
 }
 
-
 void loop() {
   // 初期設定（停止モード、外部速度指定、ブレーキ解除）
   digitalWrite(stopModeR, LOW);
@@ -651,53 +685,12 @@ void loop() {
       leftXa = leftXb;
     }
 
-    if (SwitchE < 1200) {  // 記録モード
-      if (!isRecording) {
-        Serial.println("Recording Start");
-        isRecording = true;
-        isPlaying = false;
-        recordIndex = 0;
-      }
-
-      // 一定間隔で記録
-      unsigned long now = millis();
-      if (recordIndex < recordMax && now - lastRecordTime >= recordInterval) {
-        recordLeftX[recordIndex] = leftX;
-        recordLeftY[recordIndex] = leftY;
-        recordRightX[recordIndex] = rightX;
-        recordRightY[recordIndex] = rightY;
-        recordIndex++;
-        lastRecordTime = now;
-      }
-
-      // 操作反映
-      motor(leftX, leftY);
-      lift(rightY);
-      dump(rightX);
-
-    } else if (SwitchE > 1400 && SwitchE < 1800) {  // フリーモード
-      if (isRecording) {
-        Serial.println("Recording Stop");
-        isRecording = false;
-      }
-      isPlaying = false;
-
-      lift(rightY);
-      dump(rightX);
-
-      // モーター手動制御
-      int leftX = pulseIn(ch4, HIGH, 25000);
-      int leftY = pulseIn(ch2, HIGH, 25000);
-      motor(leftX, leftY);
-
-    } else if (SwitchE > 1900) {  // 実行モード
-      if (isRecording) {
-        Serial.println("Recording Stop");
-        isRecording = false;
-      }
-      isPlaying = true;
-      playRecord();  // 記録再生
-    }
+    // モーター手動制御
+    int leftX = pulseIn(ch4, HIGH, 25000);
+    int leftY = pulseIn(ch2, HIGH, 25000);
+    motor(leftX, leftY);
+    lift(rightY);
+    dump(rightX);
 
   } else {
     // 動力OFF時
