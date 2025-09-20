@@ -10,7 +10,7 @@ void setup() {
   Serial.begin(115200);
   while (!Serial);
 
-  // MCP2515初期化
+  // MCP2515初期化（CAN速度250kbps、クロック8MHz）
   if (CAN.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK) {
     Serial.println("CAN init OK!");
   } else {
@@ -32,10 +32,11 @@ void loop() {
       
       // モジュール1
       if (rxId == 0x056) {
-        int16_t current_raw = (rxBuf[1] << 8) | rxBuf[0];
         uint16_t voltage_raw = (rxBuf[3] << 8) | rxBuf[2];
-
-        float current_A = (current_raw - 0x8000) * 0.01119;
+        uint16_t current_raw = (rxBuf[1] << 8) | rxBuf[0];
+        
+        int32_t current_signed = (int32_t)current_raw - 0x8000;  // 符号変換
+        float current_A = current_signed * 0.01119;
         float voltage_V = (voltage_raw * 4.8832) / 1000.0;
 
         Serial.print("[Module1] Voltage: ");
@@ -46,10 +47,11 @@ void loop() {
 
       // モジュール2
       else if (rxId == 0x076) {
-        int16_t current_raw = (rxBuf[1] << 8) | rxBuf[0];
         uint16_t voltage_raw = (rxBuf[3] << 8) | rxBuf[2];
-
-        float current_A = (current_raw - 0x8000) * 0.01119;
+        uint16_t current_raw = (rxBuf[1] << 8) | rxBuf[0];
+        
+        int32_t current_signed = (int32_t)current_raw - 0x8000;  // 符号変換
+        float current_A = current_signed * 0.01119;
         float voltage_V = (voltage_raw * 4.8832) / 1000.0;
 
         Serial.print("[Module2] Voltage: ");
