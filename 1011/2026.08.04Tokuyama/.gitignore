@@ -1,0 +1,15 @@
+# PlatformIO build artifacts
+.pio/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# VSCode (keep .vscode/extensions.json but ignore local settings)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/c_cpp_properties.json
+
+# Claude session data
+.claude/
