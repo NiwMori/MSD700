@@ -1,0 +1,136 @@
+# upgrade compiler
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+sudo apt update
+sudo apt install gcc-16 g++-16
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-16 150 --slave /usr/bin/g++ g++ /usr/bin/g++-16
+
+source ./env.sh
+
+# prepare gstreamer and plugins
+## install dependencies
+packages=(
+    python3-pip
+    libv4l-dev
+    nvidia-l4t-gstreamer
+    nvidia-l4t-jetson-multimedia-api
+)
+sudo apt update
+sudo apt install ${packages[@]}
+pip3 install meson ninja --upgrade
+
+## build libnice(webrtcbin dependency)
+git clone -b latest-release --depth=1 https://gitlab.freedesktop.org/libnice/libnice.git distfiles/libnice
+pushd distfiles/libnice
+opts=(
+    -Dauto_features=disabled
+    -Dgstreamer=enabled
+)
+meson setup /tmp/build/libnice --buildtype=release --prefix=$rootfs --libdir=lib ${opts[@]}
+ninja -C /tmp/build/libnice install
+popd
+
+## build gstreamer
+git clone -b 1.28 --depth=1 https://gitlab.freedesktop.org/gstreamer/gstreamer.git distfiles/gstreamer
+pushd distfiles/gstreamer
+opts=(
+    -Dauto_features=disabled
+    -Ddoc=disabled
+    -Dgpl=enabled
+    -Dbad=enabled
+    -Dgstreamer:check=enabled
+    -Dgstreamer:tools=enabled
+    -Dgst-plugins-base:videoconvertscale=enabled
+    -Dgst-plugins-base:videorate=enabled
+    -Dgst-plugins-base:videotestsrc=enabled
+    -Dgst-plugins-base:x11=enabled
+    -Dgst-plugins-base:compositor=enabled
+    -Dgst-plugins-base:gl=enabled
+    -Dgst-plugins-base:app=enabled
+    -Dgst-plugins-good:udp=enabled
+    -Dgst-plugins-good:rtp=enabled
+    -Dgst-plugins-good:v4l2=enabled
+    -Dgst-plugins-good:jpeg=enabled
+    -Dgst-plugins-good:rtpmanager=enabled
+    -Dgst-plugins-bad:videoparsers=enabled
+    -Dgst-plugins-bad:debugutils=enabled
+    -Dgst-plugins-bad:webrtc=enabled
+    -Dgst-plugins-bad:dtls=enabled
+    -Dgst-plugins-bad:sctp=enabled
+    -Dgst-plugins-bad:srtp=enabled
+)
+meson setup /tmp/build/gstreamer --buildtype=release --prefix=$rootfs --libdir=lib ${opts[@]}
+ninja -C /tmp/build/gstreamer install
+popd
+
+## backport nvv4l2camerasrc to fix ignored framerate caps
+pushd distfiles
+curl -Lo l4t-bsp-r38.2.1.tar.bz2 https://developer.nvidia.com/downloads/embedded/L4T/r38_Release_v2.1/sources/public_sources.tbz2
+tar -xvOf l4t-bsp-r38.2.1.tar.bz2 Linux_for_Tegra/source/gst-nvv4l2camera_src.tbz2 | tar -xvj
+cd gst-nvv4l2camera
+sed -i 's|-I\.\.|-I/usr/src/jetson_multimedia_api/include|' Makefile
+make
+ln -s $PWD/libgstnvv4l2camerasrc.so $rootfs/lib/gstreamer-1.0/
+popd
+
+## enable jetson plugins
+for lib in nvvidconv nvvideo4linux2; do
+    ln -sf /usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgst${lib}.so $rootfs/lib/gstreamer-1.0/
+done
+
+## build gstnvmmgl
+pushd distfiles
+mkdir gst-nvmm-gl
+tar -xvf gst-nvmm-gl-*.tar.gz -C gst-nvmm-gl --strip-component=1
+cd gst-nvmm-gl
+meson setup build -Dbuildtype=release
+ninja -C build
+ln -s $PWD/build/libgstnvmmgl.so $rootfs/lib/gstreamer-1.0/
+popd
+
+## build gstglcompositor
+pushd distfiles
+mkdir gst-gl-compositor
+tar -xvf gst-gl-compositor-*.tar.gz -C gst-gl-compositor --strip-component=1
+cd gst-gl-compositor
+meson setup build -Dbuildtype=release
+ninja -C build
+ln -s $PWD/build/libgstglcompositor.so $rootfs/lib/gstreamer-1.0/
+popd
+
+# setup livekit plugins
+## (optional) install livekit server
+curl -o distfiles/install-livekit.sh https://raw.githubusercontent.com/livekit/livekit/master/install-livekit.sh
+chmod u+x distfiles/install-livekit.sh
+INSTALL_PATH=$PWD/distfiles distfiles/install-livekit.sh
+
+## install cargo/rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+. ~/.local/share/rust/cargo/env
+
+## build livekit gstreamer plugins
+git -C distfiles clone --depth=1 "https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git"
+pushd distfiles/gst-plugins-rs
+patch -p1 < ../../docs/0001-Skip-data-channel-creation-for-producers-to-prevent-.patch
+cargo build --manifest-path net/rtp/Cargo.toml --release
+ln -s $PWD/target/release/libgstrsrtp.so $rootfs/lib/gstreamer-1.0
+cargo build --manifest-path net/webrtc/Cargo.toml --no-default-features --features livekit --release
+ln -s $PWD/target/release/libgstrswebrtc.so $rootfs/lib/gstreamer-1.0
+popd
+
+## upgrade cmake, livekit sdk requires cmake >= 3.25
+curl https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg > /dev/null
+echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ jammy main' | sudo tee /etc/apt/sources.list.d/kitware.list
+
+## build livekit sdk
+git -C distfiles clone --depth=1 --recursive "https://github.com/livekit/client-sdk-cpp.git"
+pushd distfiles/client-sdk-cpp
+./build.sh release -G ninja
+popd
+
+# build applications
+meson setup build -Dbuildtype=release
+ninja -C build
+
+# install service
+sudo ln -s $PWD/files/camera-streaming@.service /etc/systemd/system/
+sudo ln -s $PWD/files/socket-relay.service /etc/systemd/system/

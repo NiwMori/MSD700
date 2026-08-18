@@ -1,0 +1,9 @@
+{
+    "server": {
+        "address": "#livekit_addr#",
+        "port": #livekit_port#,
+        "api-key": "#livekit_api_key#",
+        "secret-key": "#livekit_api_secret#",
+        "room": "vp-#profile#",
+    },
+}

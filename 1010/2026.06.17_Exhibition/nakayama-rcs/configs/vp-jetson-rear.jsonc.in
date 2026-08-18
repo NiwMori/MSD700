@@ -1,0 +1,19 @@
+{
+    "server": {
+        "address": "#livekit_addr#",
+        "port": #livekit_port#,
+        "api-key": "#livekit_api_key#",
+        "secret-key": "#livekit_api_secret#",
+        "room": "vp-rear",
+    },
+    "screen-res": [1920, 1080],
+    "bitrate": 2048,
+    "cameras": [
+        {
+            "device": "/dev/v4l/by-path/platform-tegra-capture-vi-video-index10",
+            "capture-res": [1920, 1080],
+            "capture-rate": 30,
+            "composite-pos": [0, 0],
+        },
+    ],
+}

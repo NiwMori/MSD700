@@ -1,0 +1,11 @@
+
+livekit_addr=18.181.7.124
+livekit_port=7880
+livekit_api_key=APIpFNYmcQKHFrx
+livekit_api_secret=BIWayf4ajup9qxQodGDmD4bOVWZSHufQcz3n0eCbLnEB
+
+if true; then
+    livekit_addr=192.168.10.113
+    livekit_api_key=devkey
+    livekit_api_secret=secret
+fi

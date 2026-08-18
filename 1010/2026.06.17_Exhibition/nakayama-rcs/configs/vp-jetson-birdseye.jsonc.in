@@ -1,0 +1,41 @@
+{
+    "server": {
+        "address": "#livekit_addr#",
+        "port": #livekit_port#,
+        "api-key": "#livekit_api_key#",
+        "secret-key": "#livekit_api_secret#",
+        "room": "vp-birdseye",
+    },
+    "screen-res": [1420, 960],
+    "bitrate": 2048,
+    "cameras": [
+        {
+            "device": "/dev/v4l/by-path/platform-14100000.pcie-pci-0001:01:00.0-video-index0",
+            "capture-res": [720, 480],
+            "capture-rate": 30,
+            "composite-pos": [0, 0],
+            "force-sw-capture": true,
+        },
+        {
+            "device": "/dev/v4l/by-path/platform-14100000.pcie-pci-0001:01:00.0-video-index1",
+            "capture-res": [720, 480],
+            "capture-rate": 30,
+            "composite-pos": [720, 0],
+            "force-sw-capture": true,
+        },
+        {
+            "device": "/dev/v4l/by-path/platform-14100000.pcie-pci-0001:01:00.0-video-index2",
+            "capture-res": [720, 480],
+            "capture-rate": 30,
+            "composite-pos": [0, 480],
+            "force-sw-capture": true,
+        },
+        {
+            "device": "/dev/v4l/by-path/platform-14100000.pcie-pci-0001:01:00.0-video-index3",
+            "capture-res": [720, 480],
+            "capture-rate": 30,
+            "composite-pos": [720, 480],
+            "force-sw-capture": true,
+        },
+    ],
+}

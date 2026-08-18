@@ -1,0 +1,33 @@
+packages=(
+    gcc g++ meson cargo git pkg-config cmake
+    gstreamer1.0-libav
+    gstreamer1.0-nice
+    gstreamer1.0-plugins-{good,bad,ugly}
+    libgstreamer1.0-dev
+    libgstreamer-plugins-base1.0-dev
+    libgstreamer-plugins-bad1.0-dev
+    libasound2-dev
+    libssl-dev
+    libva-dev
+)
+sudo apt install ${packages[@]}
+
+source ./env.sh
+
+mkdir -p $rootfs/lib/gstreamer-1.0
+
+## build livekit gstreamer plugins
+git -C distfiles clone --depth=1 "https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git"
+pushd distfiles/gst-plugins-rs
+patch -p1 < ../../docs/0001-Skip-data-channel-creation-for-producers-to-prevent-.patch
+cargo build --manifest-path net/webrtc/Cargo.toml --no-default-features --features livekit --release
+ln -s $PWD/target/release/libgstrswebrtc.so $rootfs/lib/gstreamer-1.0
+popd
+
+## build livekit sdk
+git -C distfiles clone --depth=1 --recursive "https://github.com/livekit/client-sdk-cpp.git"
+pushd distfiles/client-sdk-cpp
+./build.sh release -G ninja
+popd
+
+# map fullscreen mode to any favorite key

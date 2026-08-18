@@ -1,0 +1,13 @@
+{
+    "server": {
+        "address": "#livekit_addr#",
+        "port": #livekit_port#,
+        "api-key": "#livekit_api_key#",
+        "secret-key": "#livekit_api_secret#",
+        "room": "sr",
+    },
+    "source-sockets": [
+        "/tmp/joystick.sock",
+    ],
+    "sink-socket": "/tmp/feedback.sock",
+}

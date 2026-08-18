@@ -1,0 +1,69 @@
+{
+    "server": {
+        "address": "192.168.129.155",
+        "port": 7880,
+        "api-key": "devkey",
+        "secret-key": "secret",
+        "room": "testroom",
+    },
+    "screen-res": [1920, 1320],
+    "bitrate": 2048,  // in kbps
+    "cameras": [
+        {
+            "device": "/dev/v4l/by-path/platform-tegra-capture-vi-video-index0",
+            "capture-res": [1920, 1080],
+            "capture-rate": 30,
+            "composite-pos": [0, 0],
+            "composite-res": [960, 540],
+        },
+        {
+            "device": "/dev/v4l/by-path/platform-tegra-capture-vi-video-index10",
+            "capture-res": [1920, 1080],
+            "capture-rate": 30,
+            "composite-pos": [960, 0],
+            "composite-res": [960, 540],
+        },
+        {
+            "device": "/dev/v4l/by-path/platform-tegra-capture-vi-video-index12",
+            "capture-res": [1920, 1080],
+            "capture-rate": 30,
+            "composite-pos": [0, 540],
+            "composite-res": [960, 540],
+        },
+        {
+            "device": "/dev/v4l/by-path/platform-tegra-capture-vi-video-index14",
+            "capture-res": [1920, 1080],
+            "capture-rate": 30,
+            "composite-pos": [960, 540],
+            "composite-res": [960, 540],
+        },
+        {
+            "device": "/dev/v4l/by-path/platform-14100000.pcie-pci-0001:01:00.0-video-index0",
+            "capture-res": [360, 240],
+            "capture-rate": 30,
+            "composite-pos": [0, 1080],
+            "force-sw-capture": true,
+        },
+        {
+            "device": "/dev/v4l/by-path/platform-14100000.pcie-pci-0001:01:00.0-video-index1",
+            "capture-res": [360, 240],
+            "capture-rate": 30,
+            "composite-pos": [360, 1080],
+            "force-sw-capture": true,
+        },
+        {
+            "device": "/dev/v4l/by-path/platform-14100000.pcie-pci-0001:01:00.0-video-index2",
+            "capture-res": [360, 240],
+            "capture-rate": 30,
+            "composite-pos": [720, 1080],
+            "force-sw-capture": true,
+        },
+        {
+            "device": "/dev/v4l/by-path/platform-14100000.pcie-pci-0001:01:00.0-video-index3",
+            "capture-res": [360, 240],
+            "capture-rate": 30,
+            "composite-pos": [1080, 1080],
+            "force-sw-capture": true,
+        },
+    ],
+}

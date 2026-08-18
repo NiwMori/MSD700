@@ -1,0 +1,13 @@
+{
+    "server": {
+        "address": "#livekit_addr#",
+        "port": #livekit_port#,
+        "api-key": "#livekit_api_key#",
+        "secret-key": "#livekit_api_secret#",
+        "room": "sr",
+    },
+    "source-sockets": [
+       "/tmp/sr.sock",
+    ],
+    "sink-socket" : "/tmp/sr.sock",
+}

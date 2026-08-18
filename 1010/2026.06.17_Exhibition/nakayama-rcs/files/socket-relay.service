@@ -1,0 +1,11 @@
+[Unit]
+After=network.target
+
+[Service]
+ExecStart=/home/user/build/nakayamahd-rcs/scripts/launch-socket-relay-jetson.sh
+Restart=always
+RestartSec=5s
+User=user
+
+[Install]
+WantedBy=multi-user.target

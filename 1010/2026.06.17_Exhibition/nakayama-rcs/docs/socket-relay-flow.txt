@@ -1,0 +1,5 @@
+/dev/ttyUSB(L) -[translator-chair.py]-> /tmp/joystick.sock -[socket-relay]-> /tmp/sr.sock -[socat]->/tmp/ttyROS -> ROS
+/dev/ttyUSB(R) -
+----
+/dev/input(L) -[translator-t16000m.py]->
+/dev/input(R) -

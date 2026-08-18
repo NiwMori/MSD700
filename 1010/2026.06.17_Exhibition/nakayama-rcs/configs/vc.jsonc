@@ -1,0 +1,9 @@
+{
+    "server": {
+        "address": "127.0.0.1",
+        "port": 7880,
+        "api-key": "devkey",
+        "secret-key": "secret",
+        "room": "testroom",
+    },
+}

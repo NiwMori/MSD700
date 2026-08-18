@@ -1,0 +1,11 @@
+[Unit]
+After=network.target
+
+[Service]
+ExecStart=/home/user/build/nakayamahd-rcs/scripts/launch-camera-streaming.sh %I
+Restart=always
+RestartSec=5s
+User=user
+
+[Install]
+WantedBy=multi-user.target

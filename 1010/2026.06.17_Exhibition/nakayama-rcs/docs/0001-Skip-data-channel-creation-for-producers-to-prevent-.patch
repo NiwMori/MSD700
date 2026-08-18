@@ -1,0 +1,32 @@
+From 8df0302ec97de10948d90073ae3262b4de121ef4 Mon Sep 17 00:00:00 2001
+From: mojyack <mojyack@gmail.com>
+Date: Tue, 31 Mar 2026 16:15:55 +0900
+Subject: [PATCH] Skip data channel creation for producers to prevent SCTP
+ timeout
+
+Producers don't need _reliable/_lossy data channels. When created
+without subscribers, these idle channels cause SCTP heartbeat failure
+after ~226 seconds, tearing down the entire WebRTC connection.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+---
+ net/webrtc/src/livekit_signaller/imp.rs | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/net/webrtc/src/livekit_signaller/imp.rs b/net/webrtc/src/livekit_signaller/imp.rs
+index ab84a40..dd2d983 100644
+--- a/net/webrtc/src/livekit_signaller/imp.rs
++++ b/net/webrtc/src/livekit_signaller/imp.rs
+@@ -852,6 +852,9 @@ impl SignallableImpl for Signaller {
+                           _consumer_identifier: &str,
+                           webrtcbin: &gst::Element| {
+                         let imp = obj.imp();
++                        if !imp.is_subscriber() {
++                            return;
++                        }
+                         gst::info!(CAT, "Adding data channels");
+                         let reliable_channel = webrtcbin
+                             .emit_by_name::<gst_webrtc::WebRTCDataChannel>(
+-- 
+2.53.0
+

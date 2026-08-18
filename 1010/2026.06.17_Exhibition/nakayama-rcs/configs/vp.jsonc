@@ -1,0 +1,22 @@
+{
+    "server": {
+        "address": "127.0.0.1",
+        "port": 7880,
+        "api-key": "devkey",
+        "secret-key": "secret",
+        "room": "testroom",
+    },
+    "screen-res": [1920, 1080],
+    "bitrate": 2048,  // in kbps
+    "cameras": [
+        {
+            "device": "/dev/video0",
+            "capture-res": [800, 600],
+            "capture-rate": 30,
+            "composite-res": [400, 300],  // optional
+            "composite-pos": [0, 0],
+            "crop": [200, 150, 200, 150],
+            "transform-map": "map-400x300.bin",  // optional
+        }
+    ],
+}
